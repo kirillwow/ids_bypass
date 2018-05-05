@@ -22,41 +22,73 @@
 
 #include <errno.h>
 #include <linux/tcp.h>
-
-#define IP4_HDRLEN 20
-#define TCP_HDRLEN 20
+#include <linux/udp.h>
+#include <linux/icmp.h>
 
 int linkhdrlen;
 
-struct pseudoTCPPacket {
-    uint32_t srcAddr;
-    uint32_t dstAddr;
-    uint8_t zero;
-    uint8_t protocol;
-    uint16_t TCP_len;
-};
+uint16_t udp_checksum(const void *buff, size_t len, in_addr_t src_addr, in_addr_t dest_addr)
+{
+    const uint16_t *buf=buff;
+    uint16_t *ip_src=(void *)&src_addr, *ip_dst=(void *)&dest_addr;
+    uint32_t sum = 0;
+ 
+    sum += htons(IPPROTO_UDP);
+    sum += htons(len);
+    sum += *(ip_src++);
+    sum += *ip_src; 
+    sum += *(ip_dst++);
+    sum += *ip_dst;
+    
+    for (; len > 1; len -=2)
+        sum += *buf++;
+ 
+    if ( len & 1 )
+        sum += *((uint8_t *)buf);
+ 
+    sum = (sum & 0xFFFF) + (sum >> 16);
+ 
+    return ( (uint16_t)(~sum)  );
+}
+
+uint16_t tcp_checksum(const void *buff, size_t len, in_addr_t src_addr, in_addr_t dest_addr)
+{
+    const uint16_t *buf=buff;
+    uint16_t *ip_src=(void *)&src_addr, *ip_dst=(void *)&dest_addr;
+    uint32_t sum = 0;
+ 
+    sum += htons(IPPROTO_TCP);
+    sum += htons(len);
+    sum += *(ip_src++);
+    sum += *ip_src; 
+    sum += *(ip_dst++);
+    sum += *ip_dst;
+    
+    for (; len > 1; len -=2)
+        sum += *buf++;
+ 
+    if ( len & 1 )
+        sum += *((uint8_t *)buf);
+ 
+    sum = (sum & 0xFFFF) + (sum >> 16);
+ 
+    return ( (uint16_t)(~sum)  );
+}
 
 unsigned short csum(unsigned short *ptr,int nbytes) {
-    long sum;
-    unsigned short oddbyte;
-    short answer;
+    unsigned long sum;
 
-    sum=0;
-    while(nbytes>1) {
-        sum+=*ptr++;
-        nbytes-=2;
-    }
-    if(nbytes==1) {
-        oddbyte=0;
-        *((u_char*)&oddbyte)=*(u_char*)ptr;
-        sum+=oddbyte;
-    }
+    sum = 0;
+    for (; nbytes > 1; nbytes -= 2)
+        sum += *ptr++;
+    
+    if(nbytes == 1)
+        sum+=*(u_char*)ptr;
 
-    sum = (sum>>16)+(sum & 0xffff);
-    sum = sum + (sum>>16);
-    answer=(short)~sum;
+    sum = (sum >> 16) + (sum & 0xffff);
+    sum = sum + (sum >> 16);
 
-    return(answer);
+    return (short) ~sum;;
 }
 
 pcap_t* open_pcap_socket(char* device, const char* bpfstr)
