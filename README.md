@@ -32,7 +32,7 @@ alert http any any -> any any (msg: "HTTP GET RULE"; content: "GET"; sid: 6; )
 03/02/2018-11:08:13.018914  [**] [1:6:0] HTTP GET RULE [**] [Classification: (null)] [Priority: 3] {TCP} 192.168.235.1:56581 -> 192.168.235.101:80
 ```
 
-## rst_server: Proof-Of-Concept for IDS bypass.
+## rst_server: Proof-Of-Concept for CVE-2018-14568.
 
 Windows clients are able to process TCP data even if they arrived shortly after TCP RST packet. Some IDSes process this correctly and try to match data after RST but some stops inpecting TCP stream after RST was received.
 
@@ -57,7 +57,7 @@ alert http any any -> any any (msg: "HTTP GET RULE"; content: "GET"; sid: 6; )
 05/03/2018-19:13:43.471128  [**] [1:1:0] TCP BEEN NO_STREAM RULE [**] [Classification: (null)] [Priority: 3] {TCP} 192.168.235.101:80 -> 192.168.235.1:53434
 ```
 
-## icmp_server: Proof-Of-Concept for IDS bypass.
+## icmp_server: Proof-Of-Concept for CVE-2016-10728.
 
 Server should reply with ICMP message type "Destination Unreachable" code "Port Unreachable" if a UDP packet was sent to a closed UDP port. IDS may interpret ICMP Unreachable answers on the same way as TCP RST packets and stop or limit traffic inspection of this UDP stream. If a normal UDP answer follows the ICMP message then attacker bypasses UDP checks of traffic from his server. Note that normal clients close connections if ICMP Dest. Unreachable was received so we interchange IP addresses and UDP ports in ICMP message's attached UDP so client does not accept such ICMP message but IDS does.
 
@@ -80,6 +80,7 @@ This techniques may be applied for other Intrusion Detection or Network Monitori
 
 ## Author and Credits
 Kirill Shipulin from Positive Technologies (@kirill_wow)
+Slides from my Hackfest 2018 talk [available](https://www.slideshare.net/KirillShipulin/how-to-bypass-an-ids-with-netcat-and-linux)
 
 ## Usage
 ```
